@@ -3,6 +3,7 @@ import copy
 from typing import List, Optional, Iterator, Dict, Tuple
 from itertools import zip_longest
 
+import logging
 import pycosat
 import sympy
 from sympy.logic.inference import satisfiable
@@ -21,6 +22,9 @@ Solution = List[List[bool]]
 # SAT problem in Conjunctive Normal Form
 Clause = List[int]
 CNF = List[Clause]
+
+
+logging.basicConfig(level=logging.WARNING)
 
 
 def parse_alpha_encoding(src: str) -> Problem:
@@ -185,12 +189,12 @@ def solve(problem: Problem) -> Optional[Solution]:
     height = len(problem[0])
     width = len(problem[1])
 
-    print('convert to SAT')
+    logging.info('converting to SAT')
     sat_problem, names = convert_to_sat(problem)
-    # print('convert to CNF')
+    # logging.info('converting to CNF')
     # sat_problem = to_cnf(sat_problem)
-    # print(sat_problem)
-    print('solve problem')
+    logging.debug(sat_problem)
+    logging.info('solving problem')
     # terms = sat_problem.tseitin()
     # res = terms.satisfy_one()
     res = satisfiable(sat_problem)#, algorithm='pycosat')
@@ -200,13 +204,14 @@ def solve(problem: Problem) -> Optional[Solution]:
         # no solution
         return None
 
-    print(res)
+    logging.debug(res)
 
     # names is Dict[Tuple[int, int], Symbol]
     # res is Dict[Symbol, bool]
 
     # populate with array
     # build array of solutions
+    logging.info('building solution')
     solution = []
     for y in range(height):
         row = []
