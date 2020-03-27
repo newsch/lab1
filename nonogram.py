@@ -62,6 +62,7 @@ def read_file(path: str) -> Iterator[Problem]:
         yield parse_alpha_encoding(encoded_problem)
         
 def create_possibilities(runs, length):
+    """Recursively enumerate the possiblities for a single nonogram row/column given the runs."""
 
     def _create_possibilities(runs, mark, min_start, possibility):
         #Base Case: add current possibility and return
@@ -109,10 +110,16 @@ def convert_to_sat(problem: Problem) -> Tuple[BooleanFunction, Dict[Tuple[int, i
         row_possibility_CNF = False
         for cell_possibility in row_possibility:
             cell_CNF = True
-            for x, col in enumerate(row_possibility):
-                cell_CNF &= variables[(x, y)]
+            for x, col in enumerate(cell_possibility):
+                # print(col)
+                if col:
+                    cell_CNF &= variables[(x, y)]
+                else: 
+                    cell_CNF &= ~variables[(x, y)]
+            # print("Cell: ", cell_CNF)
             row_possibility_CNF |= cell_CNF
-        # print(row_possibility)
+        # print("row_pos: ", row_possibility)
+        # print("CNF:", row_possibility_CNF)
         row_possibilities_CNF &= row_possibility_CNF
     
     #handle col
@@ -124,18 +131,21 @@ def convert_to_sat(problem: Problem) -> Tuple[BooleanFunction, Dict[Tuple[int, i
         for cell_possibility in col_possibility:
             cell_CNF = True
             for y, row in enumerate(cell_possibility):
-                cell_CNF &= variables[(x, y)]
+                if row:
+                    cell_CNF &= variables[(x, y)]
+                else: 
+                    cell_CNF &= ~(variables[(x, y)])
             col_possibility_CNF |= cell_CNF
         col_possibilities_CNF &= col_possibility_CNF
-    print("Row: ", row_possibilities)
-    print("Row: ", row_possibilities_CNF)
-    print("Col: ", col_possibilities)
-    print("Col: ", col_possibilities_CNF)
+    # print("Row: ", row_possibilities)
+    # print("Row: ", row_possibilities_CNF)
+    # print("Col: ", col_possibilities)
+    # print("Col: ", col_possibilities_CNF)
     # TODO: return form and mapping to grid locations
     
     # convert to form
     problem = row_possibilities_CNF & col_possibility_CNF
-    # problem = to_cnf(problem)
+    problem = to_cnf(problem)
     return problem, variables
 
 
@@ -143,7 +153,10 @@ def solve(problem: Problem) -> Optional[Solution]:
     height = len(problem[0])
     width = len(problem[1])
 
+    print('convert to SAT')
     sat_problem, names = convert_to_sat(problem)
+    print(sat_problem)
+    print('solve problem')
     res = satisfiable(sat_problem)
     # res = pycosat.solve(clauses)
     
@@ -179,7 +192,6 @@ def main():
     # TODO: solve nonograms here
     for nonogram in read_file(file):
         # print(nonogram)
-        print(nonogram)
         solution = solve(nonogram)
         print_nonogram(nonogram, solution)
 
