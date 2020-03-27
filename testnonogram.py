@@ -26,6 +26,44 @@ PROBLEMS = [
 
 
 class TestNonogram(unittest.TestCase):
+
+    def test_create_possibilities(self):
+        EXAMPLES = [
+            # runs, length, expected output (as a set of tuples)
+            ([1], 1, {(1,)}),
+            ([1], 2, {(0, 1),(1, 0)}),
+            ([1, 2], 3, set()),  # impossible
+            ([1, 2], 4, {(1, 0, 2, 2)}),
+            # 3 possibilities
+            ([1, 2], 5, {
+                (1, 0, 2, 2, 0),
+                (1, 0, 0, 2, 2),
+                (0, 1, 0, 2, 2),
+            }),
+            # flipped of above
+            ([2, 1], 5, {
+                (1, 1, 0, 2, 0),
+                (1, 1, 0, 0, 2),
+                (0, 1, 1, 0, 2),
+            }),
+            ([5], 7, {
+                (1, 1, 1, 1, 1, 0, 0,),
+                (0, 0, 1, 1, 1, 1, 1),
+                (0, 1, 1, 1, 1, 1, 0,)
+            }),
+            ([1, 1, 2], 7, {
+                (1, 0, 2, 0, 3, 3, 0,),
+                (1, 0, 2, 0, 0, 3, 3),
+                (1, 0, 0, 2, 0, 3, 3,),
+                (0, 1, 0, 2, 0, 3, 3,)
+            }),
+        ]
+        for i, stuff in enumerate(EXAMPLES):
+            runs, length, expected = stuff
+            with self.subTest(i=i):
+                res = nonogram.create_possibilities(runs, length)
+                res = set(tuple(p) for p in res)
+                self.assertEqual(expected, res)
     
     def test_solve(self):
         for i, pair in enumerate(PROBLEMS):
