@@ -73,8 +73,6 @@ def create_possibilities(runs, length):
                 if(i < len(possibility)):
                     p_copy[i] = mark
                 else:
-                   #If I somehow exceeds
-                   print("How did you get here")
                    return
             _create_possibilities(runs[1:], mark+1, start + runs[0]+1, p_copy)
     empty_possibility = [0 for i in range(length)]
