@@ -224,6 +224,9 @@ def solve(problem: Problem) -> Optional[Solution]:
 
 def main():
     import sys
+    if len(sys.argv) < 2:
+        print('Usage: ./nonogram.py NONOGRAM_FILE', file=sys.stderr)
+        sys.exit(1)
     file = sys.argv[1]
     # TODO: solve nonograms here
     for nonogram in read_file(file):
