@@ -1,6 +1,6 @@
 #! /usr/bin/env python3
 
-from typing import List, Optional, Iterator, Map, Tuple
+from typing import List, Optional, Iterator, Dict, Tuple
 from itertools import zip_longest
 
 import pycosat
@@ -14,6 +14,7 @@ Problem = List[List[int]]
 # solution is 2D grid of yes/no, a list of rows
 Solution = List[List[bool]]
 
+# SAT problem in Conjunctive Normal Form
 Clause = List[int]
 CNF = List[Clause]
 
@@ -57,7 +58,7 @@ def read_file(path: str) -> Iterator[Problem]:
         yield parse_alpha_encoding(encoded_problem)
 
 
-def convert_to_sat(problem: Problem) -> Tuple[CNF, Map[Tuple[int, int], int]]
+def convert_to_sat(problem: Problem) -> Tuple[CNF, Dict[Tuple[int, int], int]]:
 
     # TODO: return form and mapping to grid locations
     pass
