@@ -3,6 +3,7 @@ A B
 . #
 # #
 
+; 5x5 from <https://puzzle-nonograms.com>
 C C A B AC
 B A BA CA BA
 . . # # #
@@ -11,6 +12,7 @@ B A BA CA BA
 # # . . .
 # . # # #
 
+; 5x5 from <https://puzzle-nonograms.com>
 C C D B A
 A A C D BB
 . . # # #

@@ -28,8 +28,12 @@ def parse_alpha_encoding(src: str) -> Problem:
 
     The format is explained more at <https://rosettacode.org/wiki/Nonogram_solver>.
     """
+    # remove comments
+    src = list(filter(lambda l: l.strip().find(';') != 0 and l.strip() != '', src.splitlines()))
+    # problem is only first two lines (anything afterwards is ignored)
+    runs = src[0:2]
     return [
-        [[1 + ord(c) - ord('A') for c in group] for group in l.split()] for l in src.splitlines()
+        [[1 + ord(c) - ord('A') for c in group] for group in l.split()] for l in runs
     ]
 
 
