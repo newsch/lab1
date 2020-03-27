@@ -8,6 +8,7 @@ import sympy
 from sympy.logic.inference import satisfiable
 from sympy.logic.boolalg import BooleanFunction, to_cnf, And, Or, Not
 from sympy.core.symbol import Symbol
+from pyeda.inter import *
 
 # problem is list of list of runs
 # 0: row runs
@@ -60,9 +61,11 @@ def read_file(path: str) -> Iterator[Problem]:
 
     for encoded_problem in txt.split('\n\n'):
         yield parse_alpha_encoding(encoded_problem)
-        
-def create_possibilities(runs, length):
+
+
+def create_possibilities(runs: List[int], length: int) -> List[List[int]]:
     """Recursively enumerate the possiblities for a single nonogram row/column given the runs."""
+    possibilities = []
 
     def _create_possibilities(runs, mark, min_start, possibility):
         #Base Case: add current possibility and return
@@ -80,11 +83,36 @@ def create_possibilities(runs, length):
                 else:
                     return
             _create_possibilities(runs[1:], mark+1, start + runs[0]+1, p_copy)
+
     empty_possibility = [0 for i in range(length)]
-    possibilities = []
     _create_possibilities(runs, 1, 0, empty_possibility)
 
     return possibilities
+
+
+def create_CNF(runs_iter, length, variables) -> BooleanFunction:
+    # row/col possibilities are joined with AND, so base case is True
+    cnf = True
+    for y, row in enumerate(runs_iter):
+        row_possibility = create_possibilities(row, length)
+        # row_possibilities.append(row_possibility)
+        row_possibility_CNF = False
+        for cell_possibility in row_possibility:
+            cell_CNF = True
+            for x, col in enumerate(cell_possibility):
+                # print(col)
+                if col:
+                    cell_CNF &= variables[(x, y)]
+                else: 
+                    cell_CNF &= ~variables[(x, y)]
+            # print("Cell: ", cell_CNF)
+            row_possibility_CNF |= cell_CNF
+        # print("row_pos: ", row_possibility)
+        # print("CNF:", row_possibility_CNF)
+        cnf &= row_possibility_CNF
+
+    return cnf
+
 
 def convert_to_sat(problem: Problem) -> Tuple[BooleanFunction, Dict[Tuple[int, int], Symbol]]:
     rows = problem[0]
@@ -100,7 +128,8 @@ def convert_to_sat(problem: Problem) -> Tuple[BooleanFunction, Dict[Tuple[int, i
         for x in range(width):
             variables[(x,y)] = Symbol('c_{}_{}'.format(x,y))
 
-
+    # row_possibilities_CNF = create_CNF(rows, len(cols), variables)
+    # col_possibilities_CNF = create_CNF(cols, len(rows), variables)
     #handle row
     # row/col possibilities are joined with AND, so base case is True
     row_possibilities_CNF = True
@@ -144,8 +173,7 @@ def convert_to_sat(problem: Problem) -> Tuple[BooleanFunction, Dict[Tuple[int, i
     # TODO: return form and mapping to grid locations
     
     # convert to form
-    problem = row_possibilities_CNF & col_possibility_CNF
-    problem = to_cnf(problem)
+    problem = row_possibilities_CNF & col_possibilities_CNF
     return problem, variables
 
 
@@ -155,9 +183,13 @@ def solve(problem: Problem) -> Optional[Solution]:
 
     print('convert to SAT')
     sat_problem, names = convert_to_sat(problem)
-    print(sat_problem)
+    # print('convert to CNF')
+    # sat_problem = to_cnf(sat_problem)
+    # print(sat_problem)
     print('solve problem')
-    res = satisfiable(sat_problem)
+    # terms = sat_problem.tseitin()
+    # res = terms.satisfy_one()
+    res = satisfiable(sat_problem)#, algorithm='pycosat')
     # res = pycosat.solve(clauses)
     
     if res is False:
