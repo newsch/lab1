@@ -1,10 +1,13 @@
 #! /usr/bin/env python3
-
+import copy
 from typing import List, Optional, Iterator, Dict, Tuple
 from itertools import zip_longest
 
 import pycosat
-import copy
+import sympy
+from sympy.logic.inference import satisfiable
+from sympy.logic.boolalg import BooleanFunction, to_cnf, And, Or, Not
+from sympy.core.symbol import Symbol
 
 # problem is list of list of runs
 # 0: row runs
@@ -42,6 +45,7 @@ def print_nonogram(problem: Optional[Problem], solution: Optional[Solution] = No
             print(' '.join('#' if val else '.' for val in solution[i]), end='')
 
         if problem is not None:
+            print('  ', end='')
             print(*row_constraint)
     # print column runs
     if problem is not None:
@@ -56,7 +60,7 @@ def read_file(path: str) -> Iterator[Problem]:
 
     for encoded_problem in txt.split('\n\n'):
         yield parse_alpha_encoding(encoded_problem)
-
+        
 def create_possibilities(runs, length):
 
     def _create_possibilities(runs, mark, min_start, possibility):
@@ -73,7 +77,7 @@ def create_possibilities(runs, length):
                 if(i < len(possibility)):
                     p_copy[i] = mark
                 else:
-                   return
+                    return
             _create_possibilities(runs[1:], mark+1, start + runs[0]+1, p_copy)
     empty_possibility = [0 for i in range(length)]
     possibilities = []
@@ -81,40 +85,88 @@ def create_possibilities(runs, length):
 
     return possibilities
 
-def convert_to_sat(problem: Problem) -> Tuple[CNF, Dict[Tuple[int, int], int]]:
+def convert_to_sat(problem: Problem) -> Tuple[BooleanFunction, Dict[Tuple[int, int], Symbol]]:
     rows = problem[0]
     cols = problem[1]
     row_possibilities = []
     col_possibilities = []
-    #handle row
-    for row in rows:
-        row_possibilities.append(create_possibilities(row, len(cols)))
-    #handle col
-    for col in cols:
-        col_possibilities.append(create_possibilities(col, len(rows)))
 
+    # generate cell variables
+    height = len(rows)
+    width = len(cols)
+    variables: Dict[Tuple[int, int], Symbol] = {}
+    for y in range(height):
+        for x in range(width):
+            variables[(x,y)] = Symbol('c_{}_{}'.format(x,y))
+
+
+    #handle row
+    # row/col possibilities are joined with AND, so base case is True
+    row_possibilities_CNF = True
+    for y, row in enumerate(rows):
+        row_possibility = create_possibilities(row, len(cols))
+        row_possibilities.append(row_possibility)
+        row_possibility_CNF = False
+        for cell_possibility in row_possibility:
+            cell_CNF = True
+            for x, col in enumerate(row_possibility):
+                cell_CNF &= variables[(x, y)]
+            row_possibility_CNF |= cell_CNF
+        # print(row_possibility)
+        row_possibilities_CNF &= row_possibility_CNF
+    
+    #handle col
+    col_possibilities_CNF = True
+    for x, col in enumerate(cols):
+        col_possibility = create_possibilities(col, len(rows))
+        col_possibilities.append(col_possibility)
+        col_possibility_CNF = False
+        for cell_possibility in col_possibility:
+            cell_CNF = True
+            for y, row in enumerate(cell_possibility):
+                cell_CNF &= variables[(x, y)]
+            col_possibility_CNF |= cell_CNF
+        col_possibilities_CNF &= col_possibility_CNF
     print("Row: ", row_possibilities)
+    print("Row: ", row_possibilities_CNF)
     print("Col: ", col_possibilities)
+    print("Col: ", col_possibilities_CNF)
     # TODO: return form and mapping to grid locations
-    pass
+    
+    # convert to form
+    problem = row_possibilities_CNF & col_possibility_CNF
+    # problem = to_cnf(problem)
+    return problem, variables
 
 
 def solve(problem: Problem) -> Optional[Solution]:
     height = len(problem[0])
     width = len(problem[1])
 
-    clauses, names = convert_to_sat(problem)
-    res = pycosat.solve(clauses)
-    if isinstance(res, str):
+    sat_problem, names = convert_to_sat(problem)
+    res = satisfiable(sat_problem)
+    # res = pycosat.solve(clauses)
+    
+    if res is False:
+        # no solution
         return None
 
+    print(res)
+
+    # names is Dict[Tuple[int, int], Symbol]
+    # res is Dict[Symbol, bool]
+
+    # populate with array
+    # build array of solutions
     solution = []
     for y in range(height):
         row = []
         for x in range(width):
             term = names[(x, y)]
-            # TODO: get value from response
-            pass
+            if term in res:
+                value = res[term]
+            else:
+                value = False
             row.append(value)
         solution.append(row)
 
@@ -128,8 +180,8 @@ def main():
     for nonogram in read_file(file):
         # print(nonogram)
         print(nonogram)
-        convert_to_sat(nonogram)
-        print_nonogram(nonogram)
+        solution = solve(nonogram)
+        print_nonogram(nonogram, solution)
 
 
 if __name__ == '__main__':
