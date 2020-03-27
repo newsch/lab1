@@ -1,2 +1,2 @@
-A B
-B A
+B BA
+B A A A

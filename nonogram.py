@@ -66,7 +66,7 @@ def create_possibilities(runs, length):
             return
         elif min_start >= len(possibility):
             return
-        for start in range(0, len(possibility) - runs[0] +1 ):
+        for start in range(min_start, len(possibility) - runs[0] +1 ):
             #Make a copy of the array for every position that the run can start in
             p_copy = copy.deepcopy(possibility)
             for i in range(start, start+runs[0]):
@@ -76,7 +76,7 @@ def create_possibilities(runs, length):
                    #If I somehow exceeds
                    print("How did you get here")
                    return
-            _create_possibilities(runs[1:], mark, start + runs[0]+1, p_copy)
+            _create_possibilities(runs[1:], mark+1, start + runs[0]+1, p_copy)
     empty_possibility = [0 for i in range(length)]
     possibilities = []
     _create_possibilities(runs, 1, 0, empty_possibility)
