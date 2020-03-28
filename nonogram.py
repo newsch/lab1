@@ -6,6 +6,7 @@ Usage: `./nonogram.py nonogram_problems.txt`
 import copy
 import logging
 from itertools import zip_longest
+import time
 from typing import List, Optional, Iterator, Dict, Tuple
 
 import pycosat
@@ -23,7 +24,7 @@ Solution = List[List[bool]]
 Clause = List[int]
 CNF = List[Clause]
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 
 def parse_alpha_encoding(src: str) -> Problem:
@@ -157,13 +158,19 @@ def solve(problem: Problem) -> Optional[Solution]:
     height = len(problem[0])
     width = len(problem[1])
 
-    logging.info('converting to SAT')
+    logging.info('Converting to SAT')
+    start = time.process_time()
     sat_problem, names = convert_to_sat(problem)
+    stop = time.process_time()
+    logging.info("Done: %.3fs", stop - start)
     logging.debug(sat_problem)
 
-    logging.info('solving problem')
+    logging.info('Solving problem')
+    start = time.process_time()
     terms = sat_problem.tseitin()
     res = terms.satisfy_one()
+    stop = time.process_time()
+    logging.info("Done: %.3fs", stop - start)
 
     if res is False:
         # no solution
@@ -176,7 +183,6 @@ def solve(problem: Problem) -> Optional[Solution]:
 
     # populate with array
     # build array of solutions
-    logging.info('building solution')
     solution = []
     for y in range(height):
         row = []
