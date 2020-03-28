@@ -111,7 +111,7 @@ def create_CNF(runs_iter, length, variables) -> BooleanFunction:
                 # print(col)
                 if col:
                     cell_CNF &= variables[(x, y)]
-                else: 
+                else:
                     cell_CNF &= ~variables[(x, y)]
             # print("Cell: ", cell_CNF)
             row_possibility_CNF |= cell_CNF
@@ -134,10 +134,11 @@ def convert_to_sat(problem: Problem) -> Tuple[BooleanFunction, Dict[Tuple[int, i
     variables: Dict[Tuple[int, int], Symbol] = {}
     for y in range(height):
         for x in range(width):
-            variables[(x,y)] = Symbol('c_{}_{}'.format(x,y))
+            # variables[(x,y)] = Symbol('c_{}_{}'.format(x,y))
+            variables[(x,y)] = exprvar('c_{}_{}'.format(x,y))
 
-    # row_possibilities_CNF = create_CNF(rows, len(cols), variables)
-    # col_possibilities_CNF = create_CNF(cols, len(rows), variables)
+
+
     #handle row
     # row/col possibilities are joined with AND, so base case is True
     row_possibilities_CNF = True
@@ -148,17 +149,13 @@ def convert_to_sat(problem: Problem) -> Tuple[BooleanFunction, Dict[Tuple[int, i
         for cell_possibility in row_possibility:
             cell_CNF = True
             for x, col in enumerate(cell_possibility):
-                # print(col)
                 if col:
                     cell_CNF &= variables[(x, y)]
-                else: 
+                else:
                     cell_CNF &= ~variables[(x, y)]
-            # print("Cell: ", cell_CNF)
             row_possibility_CNF |= cell_CNF
-        # print("row_pos: ", row_possibility)
-        # print("CNF:", row_possibility_CNF)
         row_possibilities_CNF &= row_possibility_CNF
-    
+
     #handle col
     col_possibilities_CNF = True
     for x, col in enumerate(cols):
@@ -170,7 +167,7 @@ def convert_to_sat(problem: Problem) -> Tuple[BooleanFunction, Dict[Tuple[int, i
             for y, row in enumerate(cell_possibility):
                 if row:
                     cell_CNF &= variables[(x, y)]
-                else: 
+                else:
                     cell_CNF &= ~(variables[(x, y)])
             col_possibility_CNF |= cell_CNF
         col_possibilities_CNF &= col_possibility_CNF
@@ -179,7 +176,7 @@ def convert_to_sat(problem: Problem) -> Tuple[BooleanFunction, Dict[Tuple[int, i
     # print("Col: ", col_possibilities)
     # print("Col: ", col_possibilities_CNF)
     # TODO: return form and mapping to grid locations
-    
+
     # convert to form
     problem = row_possibilities_CNF & col_possibilities_CNF
     return problem, variables
@@ -195,11 +192,11 @@ def solve(problem: Problem) -> Optional[Solution]:
     # sat_problem = to_cnf(sat_problem)
     logging.debug(sat_problem)
     logging.info('solving problem')
-    # terms = sat_problem.tseitin()
-    # res = terms.satisfy_one()
-    res = satisfiable(sat_problem)#, algorithm='pycosat')
+    terms = sat_problem.tseitin()
+    res = terms.satisfy_one()
+    # res = satisfiable(sat_problem)#, algorithm='pycosat')
     # res = pycosat.solve(clauses)
-    
+
     if res is False:
         # no solution
         return None
