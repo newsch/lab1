@@ -1,14 +1,14 @@
-#! /usr/bin/env python3
-import copy
-from typing import List, Optional, Iterator, Dict, Tuple
-from itertools import zip_longest
+#!/usr/bin/env python3
+"""Nonogram solver using SAT.
 
+Usage: `./nonogram.py nonogram_problems.txt`
+"""
+import copy
 import logging
+from itertools import zip_longest
+from typing import List, Optional, Iterator, Dict, Tuple
+
 import pycosat
-import sympy
-from sympy.logic.inference import satisfiable
-from sympy.logic.boolalg import BooleanFunction, to_cnf, And, Or, Not
-from sympy.core.symbol import Symbol
 from pyeda.inter import *
 
 # problem is list of list of runs
@@ -23,8 +23,7 @@ Solution = List[List[bool]]
 Clause = List[int]
 CNF = List[Clause]
 
-
-logging.basicConfig(level=logging.WARNING)
+logging.basicConfig(level=logging.INFO)
 
 
 def parse_alpha_encoding(src: str) -> Problem:
@@ -34,6 +33,7 @@ def parse_alpha_encoding(src: str) -> Problem:
     """
     # remove comments
     src = list(filter(lambda l: l.strip().find(';') != 0 and l.strip() != '', src.splitlines()))
+
     # problem is only first two lines (anything afterwards is ignored)
     runs = src[0:2]
     return [
@@ -98,31 +98,7 @@ def create_possibilities(runs: List[int], length: int) -> List[List[int]]:
     return possibilities
 
 
-def create_CNF(runs_iter, length, variables) -> BooleanFunction:
-    # row/col possibilities are joined with AND, so base case is True
-    cnf = True
-    for y, row in enumerate(runs_iter):
-        row_possibility = create_possibilities(row, length)
-        # row_possibilities.append(row_possibility)
-        row_possibility_CNF = False
-        for cell_possibility in row_possibility:
-            cell_CNF = True
-            for x, col in enumerate(cell_possibility):
-                # print(col)
-                if col:
-                    cell_CNF &= variables[(x, y)]
-                else:
-                    cell_CNF &= ~variables[(x, y)]
-            # print("Cell: ", cell_CNF)
-            row_possibility_CNF |= cell_CNF
-        # print("row_pos: ", row_possibility)
-        # print("CNF:", row_possibility_CNF)
-        cnf &= row_possibility_CNF
-
-    return cnf
-
-
-def convert_to_sat(problem: Problem) -> Tuple[BooleanFunction, Dict[Tuple[int, int], Symbol]]:
+def convert_to_sat(problem: Problem):
     rows = problem[0]
     cols = problem[1]
     row_possibilities = []
@@ -134,12 +110,9 @@ def convert_to_sat(problem: Problem) -> Tuple[BooleanFunction, Dict[Tuple[int, i
     variables: Dict[Tuple[int, int], Symbol] = {}
     for y in range(height):
         for x in range(width):
-            # variables[(x,y)] = Symbol('c_{}_{}'.format(x,y))
             variables[(x,y)] = exprvar('c_{}_{}'.format(x,y))
 
-
-
-    #handle row
+    # handle row
     # row/col possibilities are joined with AND, so base case is True
     row_possibilities_CNF = True
     for y, row in enumerate(rows):
@@ -156,7 +129,7 @@ def convert_to_sat(problem: Problem) -> Tuple[BooleanFunction, Dict[Tuple[int, i
             row_possibility_CNF |= cell_CNF
         row_possibilities_CNF &= row_possibility_CNF
 
-    #handle col
+    # handle col
     col_possibilities_CNF = True
     for x, col in enumerate(cols):
         col_possibility = create_possibilities(col, len(rows))
@@ -171,13 +144,11 @@ def convert_to_sat(problem: Problem) -> Tuple[BooleanFunction, Dict[Tuple[int, i
                     cell_CNF &= ~(variables[(x, y)])
             col_possibility_CNF |= cell_CNF
         col_possibilities_CNF &= col_possibility_CNF
-    # print("Row: ", row_possibilities)
-    # print("Row: ", row_possibilities_CNF)
-    # print("Col: ", col_possibilities)
-    # print("Col: ", col_possibilities_CNF)
-    # TODO: return form and mapping to grid locations
 
-    # convert to form
+    logging.debug("Row: %s", row_possibilities_CNF)
+    logging.debug("Col: %s", col_possibilities_CNF)
+
+    # combine row and column
     problem = row_possibilities_CNF & col_possibilities_CNF
     return problem, variables
 
@@ -188,14 +159,11 @@ def solve(problem: Problem) -> Optional[Solution]:
 
     logging.info('converting to SAT')
     sat_problem, names = convert_to_sat(problem)
-    # logging.info('converting to CNF')
-    # sat_problem = to_cnf(sat_problem)
     logging.debug(sat_problem)
+
     logging.info('solving problem')
     terms = sat_problem.tseitin()
     res = terms.satisfy_one()
-    # res = satisfiable(sat_problem)#, algorithm='pycosat')
-    # res = pycosat.solve(clauses)
 
     if res is False:
         # no solution
@@ -230,7 +198,6 @@ def main():
         print('Usage: ./nonogram.py NONOGRAM_FILE', file=sys.stderr)
         sys.exit(1)
     file = sys.argv[1]
-    # TODO: solve nonograms here
     for nonogram in read_file(file):
         # print(nonogram)
         solution = solve(nonogram)
